@@ -4,11 +4,8 @@
 #include <cassert>
 #include <cstring>
 #include <climits>
-
 #include <omp.h>
-
 #include <time.h>
-
 #include "bmp.h"
 
 using namespace std;
@@ -24,9 +21,7 @@ unsigned char* xorBitimages(unsigned char*, unsigned char*, int);
 int countOnes(unsigned char*, int);
 void generateCountTable(int*);
 timespec last;
-
 static int countTable[256];
-
 
 void tick(int line)
 {
