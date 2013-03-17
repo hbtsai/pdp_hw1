@@ -11,7 +11,7 @@ OBJS=./obj/main.o \
 OPENMP=-fopenmp
 #OPENMP= 
 
-LIBS= -lrt
+LIBS=
 TIME=time
 
 INPUT_DIR=./input
@@ -39,13 +39,13 @@ all: $(OBJS)
 	    -c ./src/bmp.cpp
 
 exec:
-	@#$(TIME) $(EXEC) $(INPUT_DIR)/test01a.bmp $(INPUT_DIR)/test01b.bmp
+	$(TIME) $(EXEC) $(INPUT_DIR)/test01a.bmp $(INPUT_DIR)/test01b.bmp
 	@#$(TIME) $(EXEC) $(INPUT_DIR)/test01a.bmp $(INPUT_DIR)/test01b_dark.bmp
 	@#$(TIME) $(EXEC) $(INPUT_DIR)/test01a.bmp $(INPUT_DIR)/test01c.bmp
 	@#$(TIME) $(EXEC) $(INPUT_DIR)/test01a.bmp $(INPUT_DIR)/test01c_light.bmp
 	@#$(TIME) $(EXEC) $(INPUT_DIR)/test01a.bmp $(INPUT_DIR)/test01d.bmp
 	@#$(TIME) $(EXEC) $(INPUT_DIR)/test01a.bmp $(INPUT_DIR)/test01d_dark.bmp
-	$(TIME) $(EXEC) $(INPUT_DIR)/test01a_half.bmp $(INPUT_DIR)/test01c_half.bmp
+	@#$(TIME) $(EXEC) $(INPUT_DIR)/test01a_half.bmp $(INPUT_DIR)/test01c_half.bmp
 	@#$(TIME) $(EXEC) $(INPUT_DIR)/test02a.bmp $(INPUT_DIR)/test02b.bmp
 	@#$(TIME) $(EXEC) $(INPUT_DIR)/test02a.bmp $(INPUT_DIR)/test02b_dark.bmp
 	@#$(TIME) $(EXEC) $(INPUT_DIR)/test02a.bmp $(INPUT_DIR)/test02c.bmp

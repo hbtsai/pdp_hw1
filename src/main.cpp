@@ -20,24 +20,11 @@ void setOne(unsigned char*, int);
 unsigned char* xorBitimages(unsigned char*, unsigned char*, int);
 int countOnes(unsigned char*, int);
 void generateCountTable(int*);
-timespec last;
 static int countTable[256];
-
-void tick(int line)
-{
-#if 0
-	timespec t1;
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t1);
-	cout<< __FILE__ << ":" << line << " tick = " << t1.tv_nsec << " , " << t1.tv_nsec-last.tv_nsec << endl;
-	last = t1;
-#endif
-}
 
 /// main function of median threshold bitmap alignment algorithm
 int main(int argc, char** argv)
 {
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &last);
-	tick(__LINE__);
     if(argc != 3)
     {
         cout << "usage: align <input_img1> <input_img2>" << endl;
@@ -45,12 +32,10 @@ int main(int argc, char** argv)
     }
 
     generateCountTable(countTable);
-	tick(__LINE__);
     char* imageFile1 = argv[1];
     char* imageFile2 = argv[2];
     FILE* inputImage1 = fopen(imageFile1, "rb");
     FILE* inputImage2 = fopen(imageFile2, "rb");
-	tick(__LINE__);
 
     /// read bmp header
     BMP_header bmpHeader1, bmpHeader2;
@@ -60,7 +45,6 @@ int main(int argc, char** argv)
     image2 = readBMP(inputImage2, &bmpHeader2);
     fclose(inputImage1);
     fclose(inputImage2);
-	tick(__LINE__);
     
     int width1, height1, width2, height2;
     width1 = bmpHeader1.width;
@@ -78,17 +62,14 @@ int main(int argc, char** argv)
     int& height = height1;
     cout << "image width = " << width << "\timage height = " << height << endl;
 
-	tick(__LINE__);
     /// grayscale image
     unsigned char** grayscale1, ** grayscale2;
     grayscale1 = convertToGrayscale(image1, width, height);
     grayscale2 = convertToGrayscale(image2, width, height);
 
-	tick(__LINE__);
     /// median
     unsigned char median1 = findMedian(grayscale1, height, width);
     unsigned char median2 = findMedian(grayscale2, height, width);
-	tick(__LINE__);
 
     /// trying all offsets
     int difference;
@@ -98,12 +79,14 @@ int main(int argc, char** argv)
     unsigned char** shiftedGrayscale;
     unsigned char* medianBitmap1, * medianBitmap2;
     unsigned char* differenceBitmap;
+	int a[width1*height1];
+	int b[width1*height1];
+	int c[width1*height1];
     
-	tick(__LINE__);
     /// for each kind of offset (x and y offset)
 #pragma omp parallel
 {
-#pragma omp for collapse(2) private(shiftedGrayscale, medianBitmap1, medianBitmap2, differenceBitmap, difference, byteNum) firstprivate(grayscale1, grayscale2, width1, height1, median1, median2)
+#pragma omp for collapse(2) private(shiftedGrayscale, medianBitmap1, medianBitmap2, differenceBitmap, difference, byteNum, minDifference, xoffset, yoffset) firstprivate(grayscale1, grayscale2, width1, height1, median1, median2)
     for(int x = -width1/2; x < width1/2; ++x)
     {
     for(int y = -height1/2; y < height1/2; ++y)
@@ -114,13 +97,19 @@ int main(int argc, char** argv)
 
         differenceBitmap = xorBitimages(medianBitmap1, medianBitmap2, byteNum);
         difference = countOnes(differenceBitmap, byteNum);
+
+		a[(x+width1/2)*height1+(y+height1/2)] = difference;
+		b[(x+width1/2)*height1+(y+height1/2)] = x;
+		c[(x+width1/2)*height1+(y+height1/2)] = y;
         
+		/*
         if(difference < minDifference)
         {
             minDifference = difference;
             xoffset = x;
             yoffset = y;
         }
+		*/
 
         /// delete dynamic array allocated by functions
         for(int h = 0; h < height1; ++h)
@@ -134,7 +123,23 @@ int main(int argc, char** argv)
     }
     }
 }
-	tick(__LINE__);
+
+int min =INT_MAX ;
+int idx =INT_MAX ;
+int l;
+
+for(l = 0; l<width1*height1; l++)
+{
+	if(a[l]<min)
+	{
+		min=a[l];
+		idx=l;
+	}
+
+}
+	minDifference = a[idx];
+	xoffset = b[idx];
+	yoffset = c[idx];
 
     cout << "alignment offset x = " << xoffset << ", y = " << yoffset << endl;
     cout << "minDifference = " << minDifference << endl;
@@ -151,7 +156,6 @@ int main(int argc, char** argv)
     delete[] image2;
     delete[] grayscale1;
     delete[] grayscale2;
-	tick(__LINE__);
 
     return 0;
 }
@@ -211,11 +215,10 @@ unsigned char** convertToGrayscale(Pixel** inputImage, int width, int height)
     for(int w = 0; w < width; ++w)
     {
         /// the graylevel of a rgb pixel is (54*R + 183*G + 19*B)/256 
-        int graylevel = 54 * inputImage[h][w].R + 183 * inputImage[h][w].G
-                      + 19 * inputImage[h][w].B;
-        graylevel /= 256;
+//        int graylevel = 
+        //graylevel /= 256;
         //assert(graylevel >= 0 && graylevel <= 255);
-        grayscale[h][w] = (unsigned char)graylevel;
+        grayscale[h][w] = (unsigned char )((54 * inputImage[h][w].R + 183 * inputImage[h][w].G + 19 * inputImage[h][w].B)/256); //(unsigned char)graylevel;
     }
     }
 
@@ -261,6 +264,9 @@ unsigned char* convertToBitimage(unsigned char** grayscaleImage,
     int byteNum = (height * width % 8 == 0? height * width/8 : height * width/8 + 1);
 
     unsigned char* bitImage = new unsigned char[byteNum];
+	unsigned char orPattern[8]={0b10000000, 0b01000000, 0b00100000, 0b00010000, 0b00001000, 0b00000100, 0b00000010, 0b00000001};
+	unsigned char andPattern[8]={0b01111111, 0b10111111, 0b11011111, 0b11101111, 0b11110111, 0b11111011, 0b11111101, 0b11111110};
+
 #pragma omp parallel 
 {
 #pragma omp for collapse(2) firstprivate(height, width, grayscaleImage, threshold, bitImage)
@@ -269,9 +275,15 @@ unsigned char* convertToBitimage(unsigned char** grayscaleImage,
     for(int w = 0; w < width; ++w)
     {
         if(grayscaleImage[h][w] < threshold)
-            setZero(bitImage, h * width + w);
+		{
+			bitImage[(h * width + w)/8] &= andPattern[(h * width + w)%8];
+		}
+       //     setZero(bitImage, h * width + w);
         if(grayscaleImage[h][w] >= threshold)
-            setOne(bitImage, h * width + w);
+		{
+			bitImage[(h * width + w)/8] |= orPattern[(h * width + w)%8];
+		}
+       //     setOne(bitImage, h * width + w);
     }
     }
 
@@ -370,7 +382,7 @@ void setZero(unsigned char* bitImage, int index)
 unsigned char* xorBitimages(unsigned char* bitimage1, unsigned char* bitimage2, int byteNum)
 {
     unsigned char* outputBitimage = new unsigned char[byteNum];
-#pragma omp parallel for firstprivate(byteNum, outputBitimage, bitimage1, bitimage2)
+//#pragma omp parallel for firstprivate(byteNum, outputBitimage, bitimage1, bitimage2)
     for(int i = 0; i < byteNum; ++i)
     {
         outputBitimage[i] = bitimage1[i] ^ bitimage2[i];
@@ -385,7 +397,7 @@ int countOnes(unsigned char* bitimage, int byteNum)
     int count = 0;
 #pragma omp parallel 
 {
-#pragma omp for reduction(+:count) firstprivate(byteNum, bitimage)
+#pragma omp for reduction(+:count) firstprivate(byteNum, bitimage, countTable)
     for(int i = 0; i < byteNum; ++i)
     {
         count += countTable[bitimage[i]];
@@ -412,10 +424,4 @@ void generateCountTable(int* countTable)
 
     return;
 }
-
-
-
-
-
-
 
