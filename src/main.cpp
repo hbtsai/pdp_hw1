@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     /// for each kind of offset (x and y offset)
 #pragma omp parallel
 {
-#pragma omp for collapse(2) private(shiftedGrayscale, medianBitmap1, medianBitmap2, differenceBitmap, difference, byteNum, minDifference, xoffset, yoffset) firstprivate(grayscale1, grayscale2, width1, height1, median1, median2)
+#pragma omp for collapse(2) private(shiftedGrayscale, medianBitmap1, medianBitmap2, differenceBitmap, difference, byteNum) firstprivate(grayscale1, grayscale2, width1, height1, median1, median2)
     for(int x = -width1/2; x < width1/2; ++x)
     {
     for(int y = -height1/2; y < height1/2; ++y)
